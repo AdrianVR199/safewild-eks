@@ -1,0 +1,29 @@
+{
+  "comment": "Mapa de especies reconocibles por MobileNetV2/ImageNet con su nivel de peligrosidad",
+
+  "Indian_cobra":            { "danger": "CRITICO",    "venomous": true,  "aggressive": true,  "common_name": "Cobra India",            "action": "Llame al 123 de inmediato. No succione ni corte la herida. Inmovilice la extremidad." },
+  "green_mamba":             { "danger": "CRITICO",    "venomous": true,  "aggressive": true,  "common_name": "Mamba Verde",            "action": "Busque atención médica urgente. Necesita antiveneno específico." },
+  "diamondback_rattlesnake": { "danger": "CRITICO",    "venomous": true,  "aggressive": false, "common_name": "Cascabel Diamante",      "action": "Inmovilice la zona. Traslade al hospital más cercano de inmediato." },
+  "sidewinder":              { "danger": "CRITICO",    "venomous": true,  "aggressive": false, "common_name": "Víbora Cornuda",         "action": "Mantenga calma, inmovilice y busque atención médica urgente." },
+  "rock_python":             { "danger": "PRECAUCION", "venomous": false, "aggressive": true,  "common_name": "Pitón Rupestre",         "action": "No es venenosa pero puede atacar. Aléjese sin movimientos bruscos." },
+  "boa_constrictor":         { "danger": "PRECAUCION", "venomous": false, "aggressive": false, "common_name": "Boa Constrictor",        "action": "No es venenosa. Evite manipularla. Llame a control de fauna si está en casa." },
+  "king_snake":              { "danger": "SEGURO",     "venomous": false, "aggressive": false, "common_name": "Serpiente Rey",          "action": "No representa peligro para humanos. Es beneficiosa — come otras serpientes." },
+  "garter_snake":            { "danger": "SEGURO",     "venomous": false, "aggressive": false, "common_name": "Culebra de Jardín",      "action": "Completamente inofensiva. Beneficiosa para el ecosistema." },
+  "ringneck_snake":          { "danger": "SEGURO",     "venomous": false, "aggressive": false, "common_name": "Culebra Anillada",       "action": "No representa peligro. Puede liberarse en un área verde." },
+  "thunder_snake":           { "danger": "SEGURO",     "venomous": false, "aggressive": false, "common_name": "Culebra Tronadora",      "action": "Inofensiva para humanos. Déjela en paz." },
+  "hognose_snake":           { "danger": "SEGURO",     "venomous": false, "aggressive": false, "common_name": "Serpiente Hocico Cerdo", "action": "No es peligrosa. Puede simular estar muerta como defensa." },
+  "horned_viper":            { "danger": "CRITICO",    "venomous": true,  "aggressive": true,  "common_name": "Víbora Cornuda del Sahara", "action": "Veneno hemotóxico. Busque antiveneno urgente en hospital." },
+  "sea_snake":               { "danger": "CRITICO",    "venomous": true,  "aggressive": false, "common_name": "Serpiente de Mar",       "action": "Veneno neurotóxico potente. Atención médica inmediata aunque no haya dolor inicial." },
+  "night_snake":             { "danger": "PRECAUCION", "venomous": true,  "aggressive": false, "common_name": "Serpiente Nocturna",     "action": "Leve toxicidad. Consulte médico por precaución." },
+
+  "black_and_gold_garden_spider": { "danger": "SEGURO",     "venomous": false, "aggressive": false, "common_name": "Araña de Jardín",   "action": "Completamente inofensiva. Beneficiosa — controla insectos." },
+  "barn_spider":             { "danger": "SEGURO",     "venomous": false, "aggressive": false, "common_name": "Araña de Granero",       "action": "No representa peligro para humanos." },
+  "garden_spider":           { "danger": "SEGURO",     "venomous": false, "aggressive": false, "common_name": "Araña Orb",              "action": "Inofensiva. Parte importante del ecosistema." },
+  "black_widow":             { "danger": "CRITICO",    "venomous": true,  "aggressive": false, "common_name": "Viuda Negra",            "action": "Veneno neurotóxico. Atención médica inmediata, especialmente en niños y adultos mayores." },
+  "tarantula":               { "danger": "PRECAUCION", "venomous": true,  "aggressive": false, "common_name": "Tarántula",              "action": "Veneno leve para humanos. Puede causar reacción alérgica. Evite el contacto." },
+  "wolf_spider":             { "danger": "PRECAUCION", "venomous": true,  "aggressive": false, "common_name": "Araña Lobo",             "action": "Mordida dolorosa pero raramente grave. Limpie la herida y observe síntomas." },
+  "European_garden_spider":  { "danger": "SEGURO",     "venomous": false, "aggressive": false, "common_name": "Araña Europea de Jardín","action": "No representa peligro. Déjela en paz." },
+
+  "scorpion":                { "danger": "CRITICO",    "venomous": true,  "aggressive": false, "common_name": "Escorpión",              "action": "Picadura potencialmente grave. Atención médica inmediata, especialmente niños." },
+  "centipede":               { "danger": "PRECAUCION", "venomous": true,  "aggressive": false, "common_name": "Ciempiés",               "action": "Mordida dolorosa con veneno leve. Limpie la herida. Consulte médico si hay reacción." }
+}

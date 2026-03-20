@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafeWild — Identificador de Fauna Peligrosa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:        #07080f;
+      --surface:   #0d0e1a;
+      --card:      #12131f;
+      --border:    rgba(255,255,255,.08);
+      --accent:    #00d4ff;
+      --accent2:   #7c3aed;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --critico:   #ff2244;
+      --precaucion:#ffb800;
+      --seguro:    #00ff88;
+      --nowildlife:#64748b;
+      --glow:      0 0 24px rgba(0,212,255,.3);
+      --radius:    14px;
+      --mono:      'JetBrains Mono', monospace;
+      --display:   'Syne', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--mono); min-height: 100vh; overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(7,8,15,.9); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem; display: flex; align-items: center; gap: 1rem; height: 64px;
+    }
+    .logo {
+      font-family: var(--display); font-weight: 800; font-size: 1.3rem;
+      color: var(--seguro); text-shadow: 0 0 20px rgba(0,255,136,.4);
+    }
+    .logo span { color: var(--text); }
+    .logo-sub {
+      font-size: .7rem; color: var(--muted); letter-spacing: .12em;
+      text-transform: uppercase; font-weight: 400;
+    }
+    nav { display: flex; gap: .25rem; margin-left: auto; }
+    .nav-btn {
+      background: none; border: none; cursor: pointer;
+      font-family: var(--mono); font-size: .78rem; font-weight: 700;
+      color: var(--muted); padding: .5rem 1rem; border-radius: 8px;
+      letter-spacing: .08em; text-transform: uppercase; transition: all .2s;
+    }
+    .nav-btn:hover { color: var(--text); background: rgba(255,255,255,.05); }
+    .nav-btn.active { color: var(--accent); background: rgba(0,212,255,.1); }
+
+    /* ── MAIN ── */
+    main { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 2.5rem 2rem; }
+    .tab-panel { display: none; animation: fadeUp .35s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .page-title { font-family: var(--display); font-size: 2rem; font-weight: 800; letter-spacing: -.03em; margin-bottom: .4rem; }
+    .page-subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 2rem; }
+
+    /* ── CLASSIFY GRID ── */
+    .classify-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 768px) { .classify-grid { grid-template-columns: 1fr; } }
+
+    /* ── DROP ZONE ── */
+    .drop-zone {
+      border: 2px dashed rgba(0,255,136,.25); border-radius: var(--radius);
+      background: var(--card); padding: 3rem 2rem; text-align: center;
+      cursor: pointer; transition: all .25s; position: relative; overflow: hidden;
+    }
+    .drop-zone::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, rgba(0,255,136,.05) 0%, transparent 70%);
+      opacity: 0; transition: opacity .3s;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--seguro); box-shadow: 0 0 0 1px var(--seguro), 0 0 24px rgba(0,255,136,.2);
+    }
+    .drop-zone:hover::before, .drop-zone.dragover::before { opacity: 1; }
+    .drop-icon { font-size: 3.5rem; margin-bottom: 1rem; display: block; }
+    .drop-label { font-family: var(--display); font-weight: 700; font-size: 1.1rem; margin-bottom: .4rem; }
+    .drop-hint { font-size: .78rem; color: var(--muted); }
+    #file-input { display: none; }
+
+    /* ── PREVIEW ── */
+    .preview-box { display: none; border-radius: var(--radius); overflow: hidden; background: var(--card); border: 1px solid var(--border); }
+    .preview-box img { width: 100%; max-height: 380px; object-fit: contain; display: block; background: #0a0b14; }
+    .preview-overlay {
+      background: rgba(0,0,0,.7); padding: .75rem 1rem;
+      display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap;
+    }
+    .preview-filename { font-size: .78rem; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .preview-actions { display: flex; gap: .5rem; }
+    .classify-btn {
+      background: var(--seguro); color: #000;
+      border: none; border-radius: 8px; cursor: pointer;
+      font-family: var(--mono); font-weight: 700; font-size: .8rem;
+      padding: .55rem 1.2rem; letter-spacing: .06em; text-transform: uppercase;
+      transition: all .2s;
+    }
+    .classify-btn:hover { filter: brightness(1.15); box-shadow: 0 0 20px rgba(0,255,136,.4); }
+    .classify-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .reset-btn {
+      background: rgba(255,255,255,.07); color: var(--muted);
+      border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+      font-family: var(--mono); font-weight: 700; font-size: .8rem;
+      padding: .55rem 1rem; letter-spacing: .06em; text-transform: uppercase; transition: all .2s;
+    }
+    .reset-btn:hover { color: var(--text); border-color: rgba(255,255,255,.25); }
+
+    /* ── RESULTS PANEL ── */
+    .results-panel {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+      min-height: 280px; display: flex; flex-direction: column; justify-content: center;
+      transition: border-color .4s;
+    }
+    .results-panel.danger-CRITICO   { border-color: rgba(255,34,68,.5);  box-shadow: 0 0 32px rgba(255,34,68,.1); }
+    .results-panel.danger-PRECAUCION{ border-color: rgba(255,184,0,.5);  box-shadow: 0 0 32px rgba(255,184,0,.1); }
+    .results-panel.danger-SEGURO    { border-color: rgba(0,255,136,.4);  box-shadow: 0 0 32px rgba(0,255,136,.08); }
+
+    .results-empty { text-align: center; color: var(--muted); font-size: .85rem; }
+    .results-empty span { display: block; font-size: 2.8rem; margin-bottom: .75rem; }
+
+    /* ── DANGER ALERT CARD ── */
+    .danger-card {
+      border-radius: 10px; padding: 1rem 1.25rem;
+      margin-bottom: 1.2rem; display: flex; align-items: flex-start; gap: .75rem;
+    }
+    .danger-card.CRITICO    { background: rgba(255,34,68,.12);  border: 1px solid rgba(255,34,68,.4); }
+    .danger-card.PRECAUCION { background: rgba(255,184,0,.1);   border: 1px solid rgba(255,184,0,.35); }
+    .danger-card.SEGURO     { background: rgba(0,255,136,.08);  border: 1px solid rgba(0,255,136,.3); }
+    .danger-card.NO_WILDLIFE{ background: rgba(100,116,139,.1); border: 1px solid rgba(100,116,139,.3); }
+
+    .danger-icon { font-size: 1.8rem; flex-shrink: 0; line-height: 1; }
+    .danger-body { flex: 1; }
+    .danger-level {
+      font-size: .7rem; font-weight: 700; letter-spacing: .12em;
+      text-transform: uppercase; margin-bottom: .2rem;
+    }
+    .danger-level.CRITICO    { color: var(--critico); }
+    .danger-level.PRECAUCION { color: var(--precaucion); }
+    .danger-level.SEGURO     { color: var(--seguro); }
+    .danger-level.NO_WILDLIFE{ color: var(--muted); }
+
+    .danger-species { font-family: var(--display); font-weight: 700; font-size: 1.05rem; margin-bottom: .15rem; }
+    .danger-common  { font-size: .8rem; color: var(--muted); margin-bottom: .5rem; }
+    .danger-tags    { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .6rem; }
+    .dtag {
+      font-size: .68rem; padding: .2rem .55rem; border-radius: 100px;
+      font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .dtag-venomous   { background: rgba(255,34,68,.2);  color: var(--critico); }
+    .dtag-aggressive { background: rgba(255,184,0,.15); color: var(--precaucion); }
+    .dtag-safe       { background: rgba(0,255,136,.12); color: var(--seguro); }
+    .dtag-novenomous { background: rgba(100,116,139,.15); color: var(--muted); }
+
+    .danger-action {
+      font-size: .78rem; line-height: 1.5; color: var(--text);
+      background: rgba(0,0,0,.25); border-radius: 6px; padding: .5rem .75rem;
+    }
+
+    /* ── CONFIDENCE BARS ── */
+    .conf-section { margin-top: 1rem; }
+    .conf-title { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .75rem; }
+    .prediction-row { margin-bottom: .75rem; animation: slideIn .3s ease both; }
+    @keyframes slideIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+    .pred-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .3rem; }
+    .pred-name { font-size: .82rem; font-weight: 500; text-transform: capitalize; }
+    .pred-pct  { font-size: .78rem; font-weight: 700; color: var(--accent); }
+    .bar-track { height: 5px; background: rgba(255,255,255,.06); border-radius: 100px; overflow: hidden; }
+    .bar-fill  { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 1s cubic-bezier(.16,1,.3,1); width: 0; }
+    .bar-fill.top { background: linear-gradient(90deg, var(--seguro), var(--accent)); }
+
+    /* ── SPINNER ── */
+    .spinner { display: none; text-align: center; padding: 2rem; color: var(--muted); font-size: .85rem; }
+    .spin-ring { width: 40px; height: 40px; border: 3px solid rgba(0,255,136,.15); border-top-color: var(--seguro); border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── HISTORY ── */
+    .history-controls { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .history-total { color: var(--muted); font-size: .82rem; }
+    .btn-ghost {
+      background: rgba(255,255,255,.05); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; cursor: pointer;
+      font-family: var(--mono); font-size: .78rem; padding: .45rem 1rem; transition: all .2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .img-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; transition: all .2s;
+    }
+    .img-card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+    .img-card img { width: 100%; height: 140px; object-fit: cover; display: block; cursor: pointer; }
+    .img-card-body { padding: .75rem; }
+    .img-card-label { font-size: .82rem; font-weight: 700; margin-bottom: .25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .img-card-meta { font-size: .72rem; color: var(--muted); display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+    .img-card-conf { font-weight: 700; }
+
+    /* Danger badges on cards */
+    .danger-badge {
+      display: inline-block; font-size: .65rem; padding: .2rem .55rem;
+      border-radius: 100px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; margin-bottom: .45rem;
+    }
+    .db-CRITICO    { background: rgba(255,34,68,.2);    color: var(--critico);    border: 1px solid rgba(255,34,68,.4); }
+    .db-PRECAUCION { background: rgba(255,184,0,.15);   color: var(--precaucion); border: 1px solid rgba(255,184,0,.35); }
+    .db-SEGURO     { background: rgba(0,255,136,.1);    color: var(--seguro);     border: 1px solid rgba(0,255,136,.3); }
+    .db-NO_WILDLIFE{ background: rgba(100,116,139,.12); color: var(--muted);      border: 1px solid rgba(100,116,139,.25); }
+
+    .img-card-actions { display: flex; gap: .4rem; }
+    .btn-sm { flex:1; padding:.3rem .5rem; border-radius:6px; border:none; cursor:pointer; font-family:var(--mono); font-size:.7rem; font-weight:700; transition:all .2s; text-transform:uppercase; letter-spacing:.05em; }
+    .btn-reclassify { background:rgba(0,212,255,.12); color:var(--accent); }
+    .btn-reclassify:hover { background:rgba(0,212,255,.25); }
+    .btn-delete { background:rgba(255,68,102,.1); color:#ff4466; }
+    .btn-delete:hover { background:rgba(255,68,102,.25); }
+
+    .pagination { display:flex; justify-content:center; gap:.5rem; margin-top:2rem; }
+    .page-btn { width:36px; height:36px; border-radius:8px; background:var(--card); border:1px solid var(--border); color:var(--text); cursor:pointer; font-family:var(--mono); font-size:.8rem; font-weight:700; transition:all .2s; }
+    .page-btn:hover, .page-btn.active { background:rgba(0,212,255,.1); border-color:var(--accent); color:var(--accent); }
+
+    /* ── STATS ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem; margin-bottom:2rem; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; position:relative; overflow:hidden; }
+    .stat-card::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--seguro),var(--accent)); }
+    .stat-value { font-family:var(--display); font-size:2.4rem; font-weight:800; color:var(--accent); line-height:1; margin-bottom:.3rem; }
+    .stat-label { font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; }
+
+    /* danger breakdown pills */
+    .danger-breakdown { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:2rem; }
+    .dbreak {
+      flex:1; min-width:120px; border-radius:10px; padding:1rem 1.25rem;
+      display:flex; flex-direction:column; gap:.25rem;
+    }
+    .dbreak.CRITICO    { background:rgba(255,34,68,.1);  border:1px solid rgba(255,34,68,.3); }
+    .dbreak.PRECAUCION { background:rgba(255,184,0,.08); border:1px solid rgba(255,184,0,.25); }
+    .dbreak.SEGURO     { background:rgba(0,255,136,.07); border:1px solid rgba(0,255,136,.2); }
+    .dbreak-count { font-family:var(--display); font-size:1.8rem; font-weight:800; }
+    .dbreak.CRITICO    .dbreak-count { color:var(--critico); }
+    .dbreak.PRECAUCION .dbreak-count { color:var(--precaucion); }
+    .dbreak.SEGURO     .dbreak-count { color:var(--seguro); }
+    .dbreak-label { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; }
+
+    .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+    @media (max-width:768px) { .charts-grid { grid-template-columns:1fr; } }
+    .chart-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; }
+    .chart-title { font-family:var(--display); font-weight:700; font-size:.9rem; margin-bottom:1.25rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+    .chart-wrap { position:relative; height:220px; }
+
+    /* ── MODAL ── */
+    #modal { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.8); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; }
+    #modal.open { display:flex; }
+    .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); max-width:580px; width:95%; overflow:hidden; animation:fadeUp .3s ease; }
+    .modal-img { width:100%; max-height:300px; object-fit:contain; background:#0a0b14; }
+    .modal-body { padding:1.5rem; }
+    .modal-close { background:rgba(255,255,255,.07); border:1px solid var(--border); color:var(--muted); border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:.78rem; padding:.4rem 1rem; margin-top:1rem; transition:all .2s; }
+    .modal-close:hover { color:var(--text); }
+
+    /* ── TOAST ── */
+    #toast { position:fixed; bottom:2rem; right:2rem; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:.9rem 1.4rem; font-size:.82rem; color:var(--text); box-shadow:0 8px 32px rgba(0,0,0,.5); transform:translateY(80px); opacity:0; transition:all .3s; z-index:999; }
+    #toast.show { transform:translateY(0); opacity:1; }
+    #toast.success { border-color:var(--seguro); }
+    #toast.error   { border-color:var(--critico); }
+
+    .empty-state { text-align:center; padding:4rem 2rem; color:var(--muted); font-size:.85rem; }
+    .empty-state span { display:block; font-size:3rem; margin-bottom:1rem; }
+
+    /* ══════════════════════════════════════
+       RESPONSIVE — MOBILE FIRST
+       ══════════════════════════════════════ */
+
+    /* Header */
+    @media (max-width: 600px) {
+      header { padding: 0 1rem; height: auto; min-height: 56px; flex-wrap: nowrap; }
+      .logo { font-size: 1.1rem; }
+      .logo-sub { display: none; }
+      .nav-btn { font-size: .68rem; padding: .4rem .5rem; letter-spacing: .04em; }
+    }
+
+    /* Main padding */
+    @media (max-width: 600px) {
+      main { padding: 1.25rem 1rem; }
+      .page-title { font-size: 1.4rem; }
+      .page-subtitle { font-size: .78rem; margin-bottom: 1.25rem; }
+    }
+
+    /* Classify grid: 2 cols → 1 col */
+    @media (max-width: 768px) {
+      .classify-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Drop zone smaller on mobile */
+    @media (max-width: 600px) {
+      .drop-zone { padding: 2rem 1.25rem; }
+      .drop-icon { font-size: 2.5rem; }
+      .drop-label { font-size: .95rem; }
+    }
+
+    /* Preview overlay stacks on very small screens */
+    @media (max-width: 400px) {
+      .preview-overlay { flex-direction: column; align-items: flex-start; gap: .6rem; }
+      .preview-actions { width: 100%; }
+      .classify-btn, .reset-btn { flex: 1; text-align: center; }
+    }
+
+    /* Results panel min-height smaller */
+    @media (max-width: 768px) {
+      .results-panel { min-height: 180px; }
+    }
+
+    /* Stats grid: 3 cols → 1 col */
+    @media (max-width: 600px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .stat-value { font-size: 1.8rem; }
+    }
+    @media (max-width: 380px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Danger breakdown: row → col */
+    @media (max-width: 600px) {
+      .danger-breakdown { flex-direction: column; }
+      .dbreak { min-width: unset; }
+    }
+
+    /* Charts grid: 2 cols → 1 col */
+    @media (max-width: 768px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .chart-wrap { height: 180px; }
+    }
+
+    /* Image grid: auto → 2 cols fixed on mobile */
+    @media (max-width: 600px) {
+      .img-grid { grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+      .img-card img { height: 110px; }
+      .img-card-body { padding: .6rem; }
+      .img-card-label { font-size: .75rem; }
+    }
+    @media (max-width: 360px) {
+      .img-grid { grid-template-columns: 1fr; }
+    }
+
+    /* History controls wrap */
+    @media (max-width: 500px) {
+      .history-controls { flex-wrap: wrap; gap: .5rem; }
+    }
+
+    /* Toast: full width on mobile */
+    @media (max-width: 500px) {
+      #toast { left: 1rem; right: 1rem; bottom: 1rem; text-align: center; }
+    }
+
+    /* Modal full screen on mobile */
+    @media (max-width: 600px) {
+      .modal-box { width: 100%; max-height: 90vh; overflow-y: auto;
+                   border-radius: var(--radius) var(--radius) 0 0;
+                   position: fixed; bottom: 0; }
+      #modal { align-items: flex-end; }
+      .modal-img { max-height: 200px; }
+      .modal-body { padding: 1rem; }
+    }
+
+    /* Danger card compact on mobile */
+    @media (max-width: 500px) {
+      .danger-card { flex-direction: column; gap: .5rem; }
+      .danger-icon { font-size: 1.4rem; }
+      .danger-species { font-size: .95rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">Safe<span>Wild</span></div>
+    <div class="logo-sub">Identificador de Fauna Peligrosa</div>
+  </div>
+  <nav>
+    <button class="nav-btn active" data-tab="classify">🔍 Analizar</button>
+    <button class="nav-btn" data-tab="history">🗂 Historial</button>
+    <button class="nav-btn" data-tab="stats">📊 Estadísticas</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ── TAB: CLASSIFY ── -->
+  <section class="tab-panel active" id="tab-classify">
+    <div class="page-title">Identificador de Fauna Peligrosa</div>
+    <div class="page-subtitle">Sube una foto de una serpiente, araña, escorpión u otro animal para saber si representa un peligro.</div>
+
+    <div class="classify-grid">
+      <div>
+        <div class="drop-zone" id="drop-zone">
+          <span class="drop-icon">🐍</span>
+          <div class="drop-label">Arrastra la imagen aquí</div>
+          <div class="drop-hint">o haz clic para seleccionar — JPG, PNG, WEBP</div>
+          <input type="file" id="file-input" accept="image/*" />
+        </div>
+        <div class="preview-box" id="preview-box">
+          <img id="preview-img" src="" alt="preview" />
+          <div class="preview-overlay">
+            <span class="preview-filename" id="preview-filename"></span>
+            <div class="preview-actions">
+              <button class="reset-btn" id="reset-btn">↩ Nueva</button>
+              <button class="classify-btn" id="classify-btn">Analizar →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="results-panel" id="results-panel">
+        <div class="results-empty" id="results-empty">
+          <span>🦎</span>
+          Sube una imagen para identificar la especie y su nivel de peligro.
+        </div>
+        <div class="spinner" id="spinner">
+          <div class="spin-ring"></div>
+          Analizando con MobileNetV2…
+        </div>
+        <div id="results-content" style="display:none">
+          <div class="danger-card" id="danger-card">
+            <div class="danger-icon" id="danger-icon"></div>
+            <div class="danger-body">
+              <div class="danger-level" id="danger-level"></div>
+              <div class="danger-species" id="danger-species"></div>
+              <div class="danger-common" id="danger-common"></div>
+              <div class="danger-tags" id="danger-tags"></div>
+              <div class="danger-action" id="danger-action"></div>
+            </div>
+          </div>
+          <div class="conf-section">
+            <div class="conf-title">Predicciones del modelo</div>
+            <div id="prediction-bars"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TAB: HISTORY ── -->
+  <section class="tab-panel" id="tab-history">
+    <div class="page-title">Historial de Avistamientos</div>
+    <div class="page-subtitle">Todos los análisis guardados en PostgreSQL.</div>
+    <div class="history-controls">
+      <span class="history-total" id="history-total">Cargando…</span>
+      <button class="btn-ghost" onclick="loadHistory(currentPage)">↺ Actualizar</button>
+    </div>
+    <div class="img-grid" id="img-grid">
+      <div class="empty-state" style="grid-column:1/-1"><span>⏳</span>Cargando…</div>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </section>
+
+  <!-- ── TAB: STATS ── -->
+  <section class="tab-panel" id="tab-stats">
+    <div class="page-title">Estadísticas de Avistamientos</div>
+    <div class="page-subtitle">Métricas sobre fauna analizada y niveles de peligro detectados.</div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-value" id="s-total">—</div><div class="stat-label">Total análisis</div></div>
+      <div class="stat-card"><div class="stat-value" id="s-wildlife">—</div><div class="stat-label">Fauna detectada</div></div>
+      <div class="stat-card"><div class="stat-value" id="s-avg">—</div><div class="stat-label">Confianza promedio</div></div>
+    </div>
+
+    <div class="danger-breakdown" id="danger-breakdown"></div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Especies más frecuentes</div>
+        <div class="chart-wrap"><canvas id="chart-labels"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Actividad diaria (últimos 7 días)</div>
+        <div class="chart-wrap"><canvas id="chart-daily"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── MODAL ── -->
+<div id="modal">
+  <div class="modal-box">
+    <img class="modal-img" id="modal-img" src="" alt="" />
+    <div class="modal-body">
+      <div id="modal-danger-card"></div>
+      <button class="modal-close" onclick="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ── STATE ── */
+let currentBase64 = '', currentFilename = '', currentPage = 1;
+let chartLabels = null, chartDaily = null;
+
+const DANGER_META = {
+  CRITICO:    { icon: '🚨', label: 'PELIGRO CRÍTICO',    color: '#ff2244' },
+  PRECAUCION: { icon: '⚠️', label: 'PRECAUCIÓN',         color: '#ffb800' },
+  SEGURO:     { icon: '✅', label: 'NO PELIGROSO',        color: '#00ff88' },
+  NO_WILDLIFE:{ icon: '🔍', label: 'NO ES FAUNA PELIGROSA', color: '#64748b' },
+};
+
+/* ── TABS ── */
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    if (btn.dataset.tab === 'history') loadHistory(1);
+    if (btn.dataset.tab === 'stats')   loadStats();
+  });
+});
+
+/* ── DROP ZONE ── */
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0);
+      const jpeg = canvas.toDataURL('image/jpeg', 0.92);
+      currentBase64 = jpeg.split(',')[1]; currentFilename = file.name;
+      document.getElementById('preview-img').src = jpeg;
+      document.getElementById('preview-filename').textContent = file.name;
+      document.getElementById('drop-zone').style.display   = 'none';
+      document.getElementById('preview-box').style.display = 'block';
+      resetResults();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  currentBase64 = ''; currentFilename = '';
+  document.getElementById('preview-box').style.display = 'none';
+  document.getElementById('drop-zone').style.display   = 'block';
+  document.getElementById('file-input').value = '';
+  resetResults();
+});
+
+/* ── CLASSIFY ── */
+document.getElementById('classify-btn').addEventListener('click', classify);
+
+async function classify() {
+  if (!currentBase64) return;
+  const btn = document.getElementById('classify-btn');
+  btn.disabled = true;
+  document.getElementById('results-empty').style.display   = 'none';
+  document.getElementById('results-content').style.display = 'none';
+  document.getElementById('spinner').style.display         = 'block';
+  document.getElementById('results-panel').className       = 'results-panel';
+
+  try {
+    const res  = await fetch('/api/classify', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ image: currentBase64, filename: currentFilename }),
+    });
+    const data = await res.json();
+    renderResults(data);
+    const m = DANGER_META[data.danger] || DANGER_META.NO_WILDLIFE;
+    showToast(`${m.icon} ${m.label}: ${data.common_name}`, data.danger === 'CRITICO' ? 'error' : 'success');
+  } catch (err) {
+    showToast('❌ Error al analizar: ' + err.message, 'error');
+    document.getElementById('results-empty').style.display = 'block';
+  } finally {
+    document.getElementById('spinner').style.display = 'none';
+    btn.disabled = false;
+  }
+}
+
+function renderResults(data) {
+  const panel = document.getElementById('results-panel');
+  panel.className = `results-panel danger-${data.danger}`;
+
+  const m = DANGER_META[data.danger] || DANGER_META.NO_WILDLIFE;
+  const card = document.getElementById('danger-card');
+  card.className = `danger-card ${data.danger}`;
+
+  document.getElementById('danger-icon').textContent    = m.icon;
+  document.getElementById('danger-level').textContent   = m.label;
+  document.getElementById('danger-level').className     = `danger-level ${data.danger}`;
+  document.getElementById('danger-species').textContent = data.species.replace(/_/g,' ');
+  document.getElementById('danger-common').textContent  = data.common_name + ` · ${data.confidence}% confianza`;
+  document.getElementById('danger-action').textContent  = data.action;
+
+  const tags = document.getElementById('danger-tags');
+  tags.innerHTML = '';
+  if (data.is_wildlife) {
+    if (data.venomous)    tags.innerHTML += '<span class="dtag dtag-venomous">☠ Venenoso</span>';
+    else                  tags.innerHTML += '<span class="dtag dtag-novenomous">No venenoso</span>';
+    if (data.aggressive)  tags.innerHTML += '<span class="dtag dtag-aggressive">⚡ Agresivo</span>';
+    else                  tags.innerHTML += '<span class="dtag dtag-safe">Tranquilo</span>';
+  }
+
+  const bars = document.getElementById('prediction-bars');
+  bars.innerHTML = data.predictions.map((p,i) => `
+    <div class="prediction-row">
+      <div class="pred-meta">
+        <span class="pred-name">${p.label.replace(/_/g,' ')}</span>
+        <span class="pred-pct">${(p.confidence*100).toFixed(1)}%</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill ${i===0?'top':''}" data-width="${p.confidence*100}"></div>
+      </div>
+    </div>
+  `).join('');
+
+  setTimeout(() => {
+    bars.querySelectorAll('.bar-fill').forEach(el => { el.style.width = el.dataset.width + '%'; });
+  }, 50);
+
+  document.getElementById('results-content').style.display = 'block';
+}
+
+function resetResults() {
+  document.getElementById('results-empty').style.display   = 'block';
+  document.getElementById('results-content').style.display = 'none';
+  document.getElementById('spinner').style.display         = 'none';
+  document.getElementById('results-panel').className       = 'results-panel';
+}
+
+/* ── HISTORY ── */
+async function loadHistory(page) {
+  currentPage = page;
+  const grid = document.getElementById('img-grid');
+  grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span>⏳</span>Cargando…</div>';
+  try {
+    const res  = await fetch(`/api/history?page=${page}&limit=12`);
+    const data = await res.json();
+    document.getElementById('history-total').textContent = `${data.total} análisis en total`;
+    if (!data.items.length) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span>📭</span>No hay análisis aún.</div>';
+      return;
+    }
+    const m = DANGER_META;
+    grid.innerHTML = data.items.map(item => `
+      <div class="img-card">
+        <img src="data:image/jpeg;base64,${item.image_base64}" alt="${item.top_label}"
+             onerror="this.style.height='80px';this.style.background='#12131f'"
+             onclick="openModal(${JSON.stringify(item).replace(/"/g,'&quot;')})" />
+        <div class="img-card-body">
+          <div class="danger-badge db-${item.danger}">${(m[item.danger]||m.NO_WILDLIFE).icon} ${item.danger.replace('_',' ')}</div>
+          <div class="img-card-label">${(item.common_name||item.top_label).replace(/_/g,' ')}</div>
+          <div class="img-card-meta">
+            <span>${new Date(item.created_at).toLocaleDateString('es-CO')}</span>
+            <span class="img-card-conf" style="color:${(m[item.danger]||m.NO_WILDLIFE).color}">${(item.top_confidence*100).toFixed(0)}%</span>
+          </div>
+          <div class="img-card-actions">
+            <button class="btn-sm btn-reclassify" onclick="reclassify(event,${item.id})">↺ Re-analizar</button>
+            <button class="btn-sm btn-delete" onclick="deleteRecord(event,${item.id})">✕</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    renderPagination(data.total, data.page, data.limit);
+  } catch { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><span>⚠️</span>Error al cargar</div>'; }
+}
+
+function renderPagination(total, page, limit) {
+  const pages = Math.ceil(total/limit);
+  const pg = document.getElementById('pagination');
+  if (pages <= 1) { pg.innerHTML=''; return; }
+  pg.innerHTML = Array.from({length:pages},(_,i) =>
+    `<button class="page-btn ${i+1===page?'active':''}" onclick="loadHistory(${i+1})">${i+1}</button>`
+  ).join('');
+}
+
+async function deleteRecord(e, id) {
+  e.stopPropagation();
+  if (!confirm('¿Eliminar este registro?')) return;
+  await fetch(`/api/delete/${id}`, {method:'DELETE'});
+  showToast('🗑 Registro eliminado', 'success');
+  loadHistory(currentPage);
+}
+
+async function reclassify(e, id) {
+  e.stopPropagation();
+  showToast('🔄 Re-analizando…', '');
+  try {
+    const res  = await fetch(`/api/reclassify/${id}`, {method:'POST'});
+    const data = await res.json();
+    const m = DANGER_META[data.danger] || DANGER_META.NO_WILDLIFE;
+    showToast(`${m.icon} ${data.common_name} — ${m.label}`, 'success');
+  } catch { showToast('❌ Error', 'error'); }
+}
+
+/* ── MODAL ── */
+function openModal(item) {
+  document.getElementById('modal-img').src = `data:image/jpeg;base64,${item.image_base64}`;
+  const m = DANGER_META[item.danger] || DANGER_META.NO_WILDLIFE;
+  document.getElementById('modal-danger-card').innerHTML = `
+    <div class="danger-card ${item.danger}" style="margin-bottom:.75rem">
+      <div class="danger-icon">${m.icon}</div>
+      <div class="danger-body">
+        <div class="danger-level ${item.danger}">${m.label}</div>
+        <div class="danger-species">${(item.common_name||item.top_label).replace(/_/g,' ')}</div>
+        <div class="danger-common">${item.top_label.replace(/_/g,' ')} · ${(item.top_confidence*100).toFixed(1)}% confianza</div>
+        <div class="danger-action">${item.action||''}</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => { if (e.target===document.getElementById('modal')) closeModal(); });
+
+/* ── STATS ── */
+async function loadStats() {
+  try {
+    const res  = await fetch('/api/stats');
+    const data = await res.json();
+    document.getElementById('s-total').textContent   = data.total;
+    document.getElementById('s-wildlife').textContent= data.total_wildlife;
+    document.getElementById('s-avg').textContent     = (data.avg_confidence*100).toFixed(1)+'%';
+
+    const bd = document.getElementById('danger-breakdown');
+    const order = ['CRITICO','PRECAUCION','SEGURO'];
+    bd.innerHTML = order.map(d => {
+      const found = data.by_danger.find(x => x.danger===d);
+      const m = DANGER_META[d];
+      return `<div class="dbreak ${d}">
+        <div class="dbreak-count">${found?.count||0}</div>
+        <div class="dbreak-label">${m.icon} ${m.label}</div>
+      </div>`;
+    }).join('');
+
+    renderChartLabels(data.top_labels);
+    renderChartDaily(data.daily);
+  } catch (err) { console.error(err); }
+}
+
+function renderChartLabels(labels) {
+  const ctx = document.getElementById('chart-labels').getContext('2d');
+  if (chartLabels) chartLabels.destroy();
+  chartLabels = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels.map(l => l.label.replace(/_/g,' ')),
+      datasets: [{ data: labels.map(l=>l.count), backgroundColor:'rgba(0,255,136,.2)', borderColor:'rgba(0,255,136,.8)', borderWidth:1, borderRadius:4 }]
+    },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales: { x:{ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.04)'}},
+                y:{ticks:{color:'#e2e8f0',font:{family:'JetBrains Mono',size:10}},grid:{display:false}} } }
+  });
+}
+
+function renderChartDaily(daily) {
+  const ctx = document.getElementById('chart-daily').getContext('2d');
+  if (chartDaily) chartDaily.destroy();
+  const sorted = [...daily].reverse();
+  chartDaily = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sorted.map(d=>d.day),
+      datasets:[{ data:sorted.map(d=>d.count), borderColor:'#00ff88', backgroundColor:'rgba(0,255,136,.1)', tension:.4, fill:true, pointBackgroundColor:'#00ff88', pointRadius:5, pointHoverRadius:7 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales: { x:{ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.04)'}},
+                y:{ticks:{color:'#64748b',font:{family:'JetBrains Mono',size:11}},grid:{color:'rgba(255,255,255,.04)'}} } }
+  });
+}
+
+/* ── TOAST ── */
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className='', 3500);
+}
+</script>
+</body>
+</html>
