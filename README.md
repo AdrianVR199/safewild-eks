@@ -267,7 +267,11 @@ visionai-eks/
 ## 👤 Autores
 
 **Adrian Felipe Vargas Rojas**
+
 **Saulo Quiñones Góngora**
+
 **Miguel Angel Franco Restrepo**
+
 Computación en la Nube — Universidad Autónoma de Occidente  
+
 Docente: Jhorman A. Villanueva Vivas
