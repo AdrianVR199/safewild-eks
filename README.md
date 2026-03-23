@@ -1,8 +1,11 @@
 # 🔬 VisionAI — Clasificador de Imágenes en Microservicios
 
 Arquitectura de microservicios desplegada en **Amazon EKS** para clasificación
-automática de imágenes usando **MobileNetV2** (ImageNet).  
-Práctica 5 — Computación en la Nube · Universidad Autónoma de Occidente
+automática de imágenes usando **MobileNetV2** (ImageNet).
+
+Práctica 5 — Computación en la Nube  
+
+Universidad Autónoma de Occidente
 
 ---
 
